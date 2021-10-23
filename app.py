@@ -1,6 +1,5 @@
 import os
 import psycopg2
-from psycopg2.errors import DivisionByZero
 from dotenv import load_dotenv
 import database
 
@@ -58,7 +57,7 @@ def show_poll_votes(connection):
     try:
         # This gives us count and percentage of votes for each option in a poll
         poll_and_votes = database.get_poll_and_vote_results(connection, poll_id)
-    except DivisionByZero:
+    except:
         print("No votes yet cast for this poll.")
     else:
         for _id, option_text, count, percentage in poll_and_votes:
