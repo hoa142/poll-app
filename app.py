@@ -1,4 +1,6 @@
 import os
+from typing import List
+
 import psycopg2
 from dotenv import load_dotenv
 import database
@@ -36,7 +38,7 @@ def list_open_polls(connection):
         print(f"{_id}: {title} (created by {owner})")
 
 
-def prompt_vote_poll(connection):
+def prompt_vote_poll(connection) -> List[database.PollWithOption]:
     poll_id = int(input("Enter poll would you like to vote on: "))
 
     poll_options = database.get_poll_details(connection, poll_id)
