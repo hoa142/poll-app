@@ -2,8 +2,8 @@ from typing import List, Tuple
 from psycopg2.extras import execute_values
 
 Poll = Tuple[int, str, str]
+Option = Tuple[int, str, int]
 Vote = Tuple[str, int]
-PollWithOption = Tuple[int, str, str, int, str, int]
 PollResults = Tuple[int, str, int, float]
 
 CREATE_POLLS = """CREATE TABLE IF NOT EXISTS polls
@@ -13,11 +13,9 @@ CREATE_OPTIONS = """CREATE TABLE IF NOT EXISTS options
 CREATE_VOTES = """CREATE TABLE IF NOT EXISTS votes
 (username TEXT, option_id INTEGER, FOREIGN KEY(option_id) REFERENCES options (id));"""
 
-
+SELECT_POLL = "SELECT * FROM polls WHERE id = %s;"
 SELECT_ALL_POLLS = "SELECT * FROM polls;"
-SELECT_POLL_WITH_OPTIONS = """SELECT * FROM polls
-JOIN options ON polls.id = options.poll_id
-WHERE polls.id = %s;"""
+SELECT_POLL_OPTIONS = """SELECT * FROM options WHERE poll_id = %s;"""
 SELECT_LATEST_POLL = """SELECT * FROM polls
 JOIN options ON polls.id = options.poll_id
 WHERE polls.id = (
@@ -47,11 +45,32 @@ def create_tables(connection):
             cursor.execute(CREATE_VOTES)
 
 
+# -- polls --
+
+def create_poll(connection, title: str, owner: str, options: List[str]):
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute(INSERT_POLL_RETURN_ID, (title, owner))
+
+            poll_id = cursor.fetchone()[0]
+            option_values = [(option_text, poll_id) for option_text in options]
+
+            execute_values(cursor, INSERT_OPTION, option_values)
+            #for option_value in option_values:
+                #cursor.execute(INSERT_OPTION, option_value)
+
+
 def get_polls(connection) -> List[Poll]:
     with connection:
         with connection.cursor() as cursor:
             cursor.execute(SELECT_ALL_POLLS)
             return cursor.fetchall()
+
+def get_poll(connection, poll_id: int) -> Poll:
+    with connection:
+        with connection.cursor() as cursor:
+            cursor.execute(SELECT_POLL, (poll_id,))
+            return cursor.fetchone()
 
 
 def get_latest_poll(connection) -> List[PollWithOption]:
@@ -61,10 +80,10 @@ def get_latest_poll(connection) -> List[PollWithOption]:
             return cursor.fetchall()
 
 
-def get_poll_details(connection, poll_id: int) -> List[PollWithOption]:
+def get_poll_options(connection, poll_id: int) -> List[Option]:
     with connection:
         with connection.cursor() as cursor:
-            cursor.execute(SELECT_POLL_WITH_OPTIONS, (poll_id,))
+            cursor.execute(SELECT_POLL_OPTIONS, (poll_id,))
             return cursor.fetchall()
 
 
@@ -82,17 +101,7 @@ def get_random_poll_vote(connection, option_id: int) -> Vote:
             return cursor.fetchone()
 
 
-def create_poll(connection, title: str, owner: str, options: List[str]):
-    with connection:
-        with connection.cursor() as cursor:
-            cursor.execute(INSERT_POLL_RETURN_ID, (title, owner))
 
-            poll_id = cursor.fetchone()[0]
-            option_values = [(option_text, poll_id) for option_text in options]
-
-            execute_values(cursor, INSERT_OPTION, option_values)
-            #for option_value in option_values:
-                #cursor.execute(INSERT_OPTION, option_value)
 
 
 def add_poll_vote(connection, username: str, option_id: int):
