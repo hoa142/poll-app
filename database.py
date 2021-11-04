@@ -12,7 +12,7 @@ CREATE_POLLS = """CREATE TABLE IF NOT EXISTS polls
 CREATE_OPTIONS = """CREATE TABLE IF NOT EXISTS options
 (id SERIAL PRIMARY KEY, option_text TEXT, poll_id INTEGER, FOREIGN KEY(poll_id) REFERENCES polls (id));"""
 CREATE_VOTES = """CREATE TABLE IF NOT EXISTS votes
-(username TEXT, option_id INTEGER, FOREIGN KEY(option_id) REFERENCES options (id));"""
+(username TEXT, option_id INTEGER, vote_timestamp INTEGER, FOREIGN KEY(option_id) REFERENCES options (id));"""
 
 SELECT_POLL = "SELECT * FROM polls WHERE id = %s;"
 SELECT_ALL_POLLS = "SELECT * FROM polls;"
@@ -28,7 +28,7 @@ SELECT_VOTES_FOR_OPTION = "SELECT * FROM votes WHERE OPTION_ID = %s;"
 
 INSERT_POLL_RETURN_ID = "INSERT INTO polls (title, owner_username) VALUES (%s, %s) RETURNING id";
 INSERT_OPTION_RETURN_ID = "INSERT INTO options (option_text, poll_id) VALUES (%s, %s) RETURNING id;"
-INSERT_VOTE = "INSERT INTO votes (username, option_id) VALUES (%s, %s);"
+INSERT_VOTE = "INSERT INTO votes (username, option_id, vote_timestamp) VALUES (%s, %s, %s);"
 
 
 @contextmanager
@@ -86,7 +86,7 @@ def get_option(connection, option_id: int) -> Option:
 def add_option(connection, option_text, poll_id: int):
     with get_cursor(connection) as cursor:
         cursor.execute(INSERT_OPTION_RETURN_ID, (option_text, poll_id))
-        option_id = cursor.fethcone()[0]
+        option_id = cursor.fetchone()[0]
         return option_id
 
 # -- votes --
@@ -94,9 +94,9 @@ def add_option(connection, option_text, poll_id: int):
 def get_votes_for_option(connection, option_id: int) -> List[Vote]:
     with get_cursor(connection) as cursor:
         cursor.execute(SELECT_VOTES_FOR_OPTION, (option_id,))
-        return cursor.fethcall()
+        return cursor.fetchall()
 
 
-def add_poll_vote(connection, username: str, option_id: int):
+def add_poll_vote(connection, username: str, vote_timestamp: float, option_id: int):
     with get_cursor(connection) as cursor:
-        cursor.execute(INSERT_VOTE, (username, option_id))
+        cursor.execute(INSERT_VOTE, (username, option_id, vote_timestamp))
